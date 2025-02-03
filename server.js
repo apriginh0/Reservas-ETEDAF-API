@@ -112,7 +112,7 @@ const mg = mailgun.client({
 
 
 // Inicie o servidor após garantir que o banco está configurado
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   if (process.env.NODE_ENV !== "production") {
     console.log(`Servidor rodando na porta ${PORT}`);
   }
