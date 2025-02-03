@@ -19,7 +19,6 @@ class User {
 
   // Método para comparar senha
   static async comparePassword(enteredPassword, hashedPassword) {
-    console.log(hashedPassword);
     return await bcrypt.compare(enteredPassword, hashedPassword);
   }
 }

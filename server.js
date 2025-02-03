@@ -1,9 +1,11 @@
+const express = require('express');
 const cors = require("cors");
 require("dotenv").config();
 const db = require("./config/dbTurso");
-const routes = require('./routes');
-
-const nodemailer = require('nodemailer');// Necessário para parsear JSON
+const salasRoutes = require('./routes/salasRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const classReservationsRoutes = require('./routes/class_reservationsRoutes');
 
 const formData = require('form-data');
 const Mailgun = require('mailgun.js');
@@ -14,11 +16,14 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 
-// Logs de inicialização
-console.log('Servidor iniciado. Configurando middlewares e rotas...');
-
 // Rotas
-app.use('/api', routes);
+app.use('/api/auth', authRoutes);
+
+app.use('/api/class_reservations', classReservationsRoutes);
+
+app.use('/api/salas', salasRoutes);
+
+app.use('/api/users', userRoutes);
 
 // Tratamento de erros genéricos
 app.use((err, req, res, next) => {
@@ -26,36 +31,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erro interno no servidor' });
 });
 
-// Criação automática das tabelas ao iniciar o servidor
-// const initializeDatabase = async () => {
-//   try {
-//     await db.batch(
-//       [
-//         "CREATE TABLE IF NOT EXISTS projectors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)",
-//         "CREATE TABLE IF NOT EXISTS speakers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)",
-//         "CREATE TABLE IF NOT EXISTS reservations (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, projector TEXT, speaker TEXT, reservedBy TEXT, objective TEXT)",
-//         "INSERT OR IGNORE INTO projectors (name) VALUES ('Projetor 01'), ('Projetor 02'), ('Projetor 03')",
-//         "INSERT OR IGNORE INTO speakers (name) VALUES ('Caixa de Som 01'), ('Caixa de Som 02')"
-//       ],
-//       "write"
-//     );
-//     console.log("Tabelas criadas/verificadas com sucesso!");
-//   } catch (error) {
-//     console.error("Erro ao criar/verificar tabelas:", error.message);
-//   }
-// };
-
 // Rota básica para teste da conexão com o banco
 app.get('/', async (req, res) => {
   try {
     const result = await db.execute("SELECT name FROM sqlite_master WHERE type='table'");
-    console.log('Tabelas disponíveis no banco:', result.rows);
     res.json({ tables: result.rows });
   } catch (error) {
     console.error('Erro ao buscar tabelas:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
+
+app.get('/api/class_reservations', async (req, res) => {
+  const { date, classId } = req.query;
+  try {
+    const [rows] = await db.execute(
+      'SELECT time FROM class_reservations WHERE date = ? AND classId = ?',
+      [date, classId]
+    );
+    res.json(rows || []);
+  } catch (error) {
+    console.error('Erro ao buscar reservas:', error);
+    res.status(500).json({ error: 'Erro ao buscar reservas' });
+  }
+});
+
 
 
 // Endpoint para inserir uma reserva
@@ -85,33 +85,35 @@ const mg = mailgun.client({
   key: process.env.MAILGUN_API_KEY
 });
 
-const sendEmail = async (to, subject, text) => {
-  try {
-    console.log('API Key:', process.env.MAILGUN_API_KEY);
-    console.log('Domain:', process.env.MAILGUN_DOMAIN);
+// const sendEmail = async (to, subject, text) => {
+//   try {
+//     console.log('API Key:', process.env.MAILGUN_API_KEY);
+//     console.log('Domain:', process.env.MAILGUN_DOMAIN);
 
-    const response = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
-      from: "Suporte <adm.etedaf@gmail.com>",
-      to: [to],
-      subject: subject,
-      text: text,
-      html: `<p>${text}</p>`
-    }).then((res) => {
-      console.log(res);
-    }).catch((err) => {
-      console.log(err);
-    });
-    console.log('E-mail enviado com sucesso:', response);
-  } catch (error) {
-    console.error('Erro ao enviar e-mail:', error);
-  }
-};
+//     const response = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+//       from: "Suporte <adm.etedaf@gmail.com>",
+//       to: [to],
+//       subject: subject,
+//       text: text,
+//       html: `<p>${text}</p>`
+//     }).then((res) => {
+//       console.log(res);
+//     }).catch((err) => {
+//       console.log(err);
+//     });
+//     console.log('E-mail enviado com sucesso:', response);
+//   } catch (error) {
+//     console.error('Erro ao enviar e-mail:', error);
+//   }
+// };
 
 // Testando o envio
-sendEmail('apriginh0@gmail.com', 'Teste Mailgun', 'Este é um teste de envio via Mailgun.');
+// sendEmail('apriginh0@gmail.com', 'Teste Mailgun', 'Este é um teste de envio via Mailgun.');
 
 
 // Inicie o servidor após garantir que o banco está configurado
 app.listen(PORT, async () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  }
 });

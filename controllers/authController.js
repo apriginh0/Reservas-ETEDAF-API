@@ -8,9 +8,6 @@ require('dotenv').config(); // Para acessar o JWT_SECRET do .env
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  console.log('Iniciando login...');
-  console.log('Dados recebidos:', { email, password });
-
   try {
     // Buscar usuário no banco de dados
     const query = 'SELECT * FROM users WHERE email = ?';
@@ -19,11 +16,8 @@ const loginUser = async (req, res) => {
       args: [email]});
     const user = result.rows[0]; // Pegar a primeira linha do resultado
 
-    console.log('Resultado da busca no banco de dados:', user);
-
     // Verificar se o usuário existe
     if (!user) {
-      console.log('Usuário não encontrado.');
       return res.status(401).json({ message: 'Credenciais inválidas - usuário não encontrado' });
     }
 
@@ -34,10 +28,8 @@ const loginUser = async (req, res) => {
 
     // Comparar senha usando bcrypt
     const isMatch = await User.comparePassword(password, user.password);
-    console.log('Comparação de senha:', isMatch);
 
     if (!isMatch) {
-      console.log('Senha incorreta.');
       return res.status(401).json({ message: 'Credenciais inválidas - senha incorreta' });
     }
 
@@ -45,7 +37,6 @@ const loginUser = async (req, res) => {
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
     });
-    console.log('Token gerado com sucesso:', token);
 
     res.status(200).json({
       message: 'Login bem-sucedido!',
@@ -60,10 +51,7 @@ const loginUser = async (req, res) => {
 
 // Registro de usuário (exemplo simples)
 const register = async (req, res) => {
-   const { email, password } = req.body;
-
-   console.log('Iniciando registro...');
-   console.log('Dados recebidos:', { email, password });
+   const { name, email, password } = req.body;
 
    try {
      // Verificar se o usuário já existe no banco
@@ -71,7 +59,6 @@ const register = async (req, res) => {
      const userExists = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
 
      if (userExists.rows.length > 0) {
-       console.log('Usuário já existe.');
        return res.status(400).json({ message: 'Usuário já existe' });
      }
 
@@ -80,11 +67,10 @@ const register = async (req, res) => {
 
      // Inserir o novo usuário no banco
      await db.execute({
-       sql: `INSERT INTO users (email, password, role, approved) VALUES (?, ?, ?, ?)`,
-       args: [email, hashedPassword, 'teacher', 0], // Definindo 'user' como role padrão
+       sql: `INSERT INTO users (name, email, password, role, approved) VALUES (?, ?, ?, ?,?)`,
+       args: [name, email, hashedPassword, 'teacher', 0], // Definindo 'teacher' como role padrão
      });
 
-     console.log('Usuário registrado com sucesso. Aguardando aprovação.');
      res.status(201).json({ message: 'Usuário registrado com sucesso' });
    } catch (error) {
      console.error('Erro ao registrar usuário:', error.message);

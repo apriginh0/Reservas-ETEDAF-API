@@ -3,9 +3,10 @@ const db = require('../config/dbTurso'); // Conexão com o banco de dados
 // Buscar usuários pendentes (approved = 0)
 exports.getPendingUsers = async (req, res) => {
   try {
-    const users = await db.all('SELECT * FROM users WHERE approved = 0');
-    res.status(200).json(users);
+    const users = await db.execute('SELECT * FROM users WHERE approved = 0');
+    res.status(200).json(users.rows);
   } catch (error) {
+    console.error('Erro ao buscar usuários pendentes:', error.message);
     res.status(500).json({ error: 'Erro ao buscar usuários pendentes' });
   }
 };
@@ -14,7 +15,7 @@ exports.getPendingUsers = async (req, res) => {
 exports.approveUser = async (req, res) => {
   const { id } = req.params;
   try {
-    await db.run('UPDATE users SET approved = 1 WHERE id = ?', [id]);
+    await db.execute('UPDATE users SET approved = 1 WHERE id = ?', [id]);
     res.status(200).json({ message: 'Usuário aprovado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao aprovar usuário' });
@@ -25,7 +26,7 @@ exports.approveUser = async (req, res) => {
 exports.rejectUser = async (req, res) => {
   const { id } = req.params;
   try {
-    await db.run('DELETE FROM users WHERE id = ?', [id]);
+    await db.execute('DELETE FROM users WHERE id = ?', [id]);
     res.status(200).json({ message: 'Usuário rejeitado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao rejeitar usuário' });
@@ -35,8 +36,8 @@ exports.rejectUser = async (req, res) => {
 // Buscar usuários aprovados (approved = 1)
 exports.getApprovedUsers = async (req, res) => {
   try {
-    const users = await db.all('SELECT * FROM users WHERE approved = 1');
-    res.status(200).json(users);
+    const users = await db.execute('SELECT * FROM users WHERE approved = 1');
+    res.status(200).json(users.rows);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar usuários aprovados' });
   }
@@ -47,7 +48,7 @@ exports.changeUserRole = async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
   try {
-    await db.run('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+    await db.execute('UPDATE users SET role = ? WHERE id = ?', [role, id]);
     res.status(200).json({ message: 'Função do usuário alterada com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao alterar função do usuário' });

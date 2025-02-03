@@ -6,9 +6,9 @@ const classReservationsRoutes = require('./class_reservationsRoutes');
 const salasRoutes = require('./salasRoutes');
 const userRoutes = require('./userRoutes');
 
-router.use('/auth', authRoutes);
-router.use('/class_reservations', classReservationsRoutes);
-router.use('/salas', salasRoutes);
-router.use('/users', userRoutes);
+router.use('/api/auth', authRoutes);
+router.use('/api/class_reservations', classReservationsRoutes);
+router.use('/api/', salasRoutes);
+router.use('/api/users', userRoutes);
 
 module.exports = router;
