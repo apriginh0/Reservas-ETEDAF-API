@@ -1,0 +1,19 @@
+# Ignorar o arquivo de variáveis de ambiente (NUNCA envie isso para o GitHub!)
+.env
+
+# Ignorar dependências do Node.js (serão instaladas automaticamente com npm install)
+node_modules/
+
+# Arquivos de logs (caso existam no futuro)
+*.log
+
+# Cache do editor (caso use VS Code, pode ignorar essas configurações locais)
+.vscode/
+.idea/
+
+# Ignorar a pasta .git (apenas por precaução, mas geralmente o Git já ignora)
+.git/
+
+# Ignorar arquivos específicos do sistema operacional (exemplo: arquivos de cache do Mac e Linux)
+.DS_Store
+Thumbs.db
