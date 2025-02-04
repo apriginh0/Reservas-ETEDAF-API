@@ -12,9 +12,15 @@ const Mailgun = require('mailgun.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8100"; // Ajuste para seu frontend local
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: FRONTEND_URL, // Só esse frontend pode acessar a API
+    credentials: true, // Se necessário
+  })
+);
 
 // Rotas
 app.use('/api/auth', authRoutes);
