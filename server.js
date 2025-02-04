@@ -12,13 +12,23 @@ const Mailgun = require('mailgun.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8100"; // Ajuste para seu frontend local
+const FRONTEND_URL = process.env.FRONTEND_URL; // Ajuste para seu frontend local
+const allowedOrigins = [
+  "http://localhost:8100",
+  FRONTEND_URL
+];
 
 app.use(express.json());
 app.use(
   cors({
-    origin: FRONTEND_URL, // Só esse frontend pode acessar a API
-    credentials: true, // Se necessário
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   })
 );
 
