@@ -15,7 +15,9 @@ const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL; // Ajuste para seu frontend local
 const allowedOrigins = [
   "http://localhost:8100",
-  FRONTEND_URL
+  "http://localhost",       // Para chamadas diretas
+  FRONTEND_URL,             // Seu frontend na Vercel (ex: "https://www.etedaf.com.br")
+  null                      // Permitir chamadas de apps móveis
 ];
 
 app.use(express.json());
