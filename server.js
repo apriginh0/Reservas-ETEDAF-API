@@ -16,6 +16,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL; // Ajuste para seu frontend local
 const allowedOrigins = [
   FRONTEND_URL,             // Seu frontend na Vercel (ex: "https://www.etedaf.com.br")
   'http://localhost:8100',
+  'https://localhost',
+  'https://localhost/login',
   null                               // Para apps Android
 ];
 
