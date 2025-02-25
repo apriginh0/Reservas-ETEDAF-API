@@ -1,8 +1,32 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const User = require('../models/User'); // Importa o modelo User
 const db = require('../config/dbTurso'); // Conexão com o banco de dados
 const nodemailer = require('nodemailer');
 require('dotenv').config(); // Para acessar o JWT_SECRET do .env
+
+// Gera tokens e armazena refresh token
+const generateTokens = async (user) => {
+  // Access Token (15 minutos)
+  const accessToken = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+  );
+
+  // Refresh Token (7 dias)
+  const refreshToken = crypto.randomBytes(64).toString('hex');
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  // Armazena hash do refresh token
+  await db.execute({
+      sql: 'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+      args: [user.id, await bcrypt.hash(refreshToken, 10), expiresAt.toISOString()]
+  });
+
+  return { accessToken, refreshToken };
+};
 
 // Login Controller
 const loginUser = async (req, res) => {
@@ -17,37 +41,79 @@ const loginUser = async (req, res) => {
     const user = result.rows[0]; // Pegar a primeira linha do resultado
 
     // Verificar se o usuário existe
-    if (!user) {
-      return res.status(401).json({ message: 'Credenciais inválidas - usuário não encontrado' });
-    }
-
-    // Verificar se o usuário foi aprovado
-    if (user.approved !== 1) {
-      return res.status(401).json({ message: 'Cadastro pendente, aguardando autorização.' });
+    if (!user || user.approved !== 1 || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ message: 'Credenciais inválidas ou conta aguardando autorização' });
     }
 
     // Comparar senha usando bcrypt
-    const isMatch = await User.comparePassword(password, user.password);
+    const { accessToken, refreshToken } = await generateTokens(user);
 
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Credenciais inválidas - senha incorreta' });
-    }
-
-    // Gerar token JWT
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+    // Configura cookie seguro
+    res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 15 * 60 * 1000 // 15 minutos
     });
 
     res.status(200).json({
-      message: 'Login bem-sucedido!',
-      token,
-      user: { id: user.id, email: user.email, role: user.role },
+        message: 'Login bem-sucedido!',
+        refreshToken, // Enviado apenas uma vez via corpo
+        user: { id: user.id, email: user.email, role: user.role }
     });
   } catch (error) {
     console.error('Erro no login:', error.message);
     res.status(500).json({ message: 'Erro ao efetuar login', error: error.message });
   }
 };
+
+// Novo endpoint para refresh token
+const refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  try {
+      // Busca token no banco
+      const hashedToken = await bcrypt.hash(refreshToken, 10);
+      const tokenResult = await db.execute({
+          sql: `SELECT * FROM refresh_tokens
+                WHERE token = ? AND expires_at > datetime('now')`,
+          args: [hashedToken]
+      });
+
+      const dbToken = tokenResult.rows[0];
+      if (!dbToken) throw new Error('Refresh token inválido');
+
+      // Revoga token usado
+      await db.execute({
+          sql: 'DELETE FROM refresh_tokens WHERE id = ?',
+          args: [dbToken.id]
+      });
+
+      // Gera novos tokens
+      const userResult = await db.execute({
+          sql: 'SELECT * FROM users WHERE id = ?',
+          args: [dbToken.user_id]
+      });
+      const user = userResult.rows[0];
+
+      const newTokens = await generateTokens(user);
+
+      // Atualiza cookie
+      res.cookie('access_token', newTokens.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'Strict',
+          maxAge: 15 * 60 * 1000
+      });
+
+      res.json({ refreshToken: newTokens.refreshToken });
+
+  } catch (error) {
+      console.error('Erro ao renovar token:', error);
+      res.status(401).json({ message: 'Sessão expirada, faça login novamente' });
+  }
+};
+
 
 // Registro de usuário (exemplo simples)
 const register = async (req, res) => {
@@ -144,11 +210,30 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+const revokeTokens = async (userId) => {
+  await db.execute({
+      sql: 'DELETE FROM refresh_tokens WHERE user_id = ?',
+      args: [userId]
+  });
+};
+
+// Novo método de logout
+const logout = async (req, res) => {
+  try {
+      await revokeTokens(req.user.id);
+      res.clearCookie('access_token');
+      res.status(200).json({ message: 'Logout realizado com sucesso' });
+  } catch (error) {
+      res.status(500).json({ message: 'Erro ao fazer logout' });
+  }
+};
+
  // Exportar todas as funções
  exports.loginUser = loginUser;
  exports.register = register;
  exports.updateUser = updateUser;
  exports.forgotPassword = forgotPassword;
-
+ exports.refreshToken = refreshToken;
+ exports.logout = logout;
 
 

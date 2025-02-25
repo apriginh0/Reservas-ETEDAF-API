@@ -1,9 +1,9 @@
 const express = require('express');
-const { protect } = require('../middleware/authMiddleware');
+const { authenticate } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/reservations', protect, (req, res) => {
+router.get('/reservations', authenticate, (req, res) => {
   res.json({ message: `Olá ${req.user.role}, suas reservas estão aqui!` });
 });
 

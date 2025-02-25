@@ -8,6 +8,7 @@ const userRoutes = require('./routes/userRoutes');
 const classReservationsRoutes = require('./routes/class_reservationsRoutes');
 
 const formData = require('form-data');
+const helmet = require('helmet');
 const Mailgun = require('mailgun.js');
 
 const app = express();
@@ -20,6 +21,9 @@ const allowedOrigins = [
   'https://localhost/login',
   null                               // Para apps Android
 ];
+
+// Middlewares de segurança
+app.use(helmet()); // Ativa proteções padrão
 
 app.use(express.json());
 app.use(
@@ -123,6 +127,26 @@ const mg = mailgun.client({
 // Testando o envio
 // sendEmail('apriginh0@gmail.com', 'Teste Mailgun', 'Este é um teste de envio via Mailgun.');
 
+// Configuração customizada do helmet
+app.use(
+  helmet({
+      contentSecurityPolicy: {
+          directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "trusted-scripts.com"],
+          },
+      },
+  })
+);
+
+// HSTS (HTTP Strict Transport Security)
+app.use((req, res, next) => {
+  res.setHeader(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains; preload'
+  );
+  next();
+});
 
 // Inicie o servidor após garantir que o banco está configurado
 app.listen(PORT, () => {

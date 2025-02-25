@@ -1,27 +1,26 @@
 const express = require('express');
-const { protect } = require('../middleware/authMiddleware'); // Importa o middleware
-const { register, loginUser, updateUser } = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticate, adminOnly } = require('../middleware/authMiddleware'); // Importa o middleware
+const { register, loginUser, updateUser, forgotPassword, refreshToken, logout } = require('../controllers/authController');
 const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
+// Rotas públicas
 router.post('/register', register);
 router.post('/login', loginUser);
+router.post('/forgot-password', forgotPassword); // Rota para recuperar senha
+router.post('/refresh-token', refreshToken); // Nova rota para refresh token
+router.post('/logout', authenticate, logout);
 
 // Rota protegida
-router.get('/profile', protect, (req, res) => {
+router.get('/profile', authenticate, (req, res) => {
    res.json({ message: 'Acesso autorizado!', user: req.user });
  });
 // Rota protegida (apenas admin)
-router.put('/update-user', authenticateToken, updateUser);
-
-// Rota para recuperar senha
-const { forgotPassword } = require('../controllers/authController');
-router.post('/forgot-password', forgotPassword);
+router.put('/update-user', authenticate, adminOnly, updateUser);
 
 // Rota para teste de envio de e-mail
-router.post('/test-email', async (req, res) => {
+router.post('/test-email', authenticate, async (req, res) => {
   try {
     const transporter = nodemailer.createTransport({
       host: 'smtp.office365.com',
