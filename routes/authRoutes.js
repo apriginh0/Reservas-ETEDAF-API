@@ -12,6 +12,8 @@ router.post('/forgot-password', forgotPassword); // Rota para recuperar senha
 router.post('/refresh-token', refreshToken); // Nova rota para refresh token
 router.post('/logout', authenticate, logout);
 
+// Rota do usuário autenticado
+router.get('/me', authenticate, authController.getCurrentUser);
 // Rota protegida
 router.get('/profile', authenticate, (req, res) => {
    res.json({ message: 'Acesso autorizado!', user: req.user });

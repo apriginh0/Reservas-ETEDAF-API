@@ -168,6 +168,15 @@ const updateUser = async (req, res) => {
    }
  };
 
+ const getCurrentUser = async (req, res) => {
+  try {
+    const user = await db.get('SELECT id, role FROM users WHERE id = ?', [req.user.id]);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar usuário' });
+  }
+};
+
 // Enviar e-mail de redefinição de senha
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -235,5 +244,6 @@ const logout = async (req, res) => {
  exports.forgotPassword = forgotPassword;
  exports.refreshToken = refreshToken;
  exports.logout = logout;
+ exports.getCurrentUser = getCurrentUser;
 
 
