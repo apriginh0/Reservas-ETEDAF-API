@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticate, adminOnly } = require('../middleware/authMiddleware'); // Importa o middleware
+const authController = require('../controllers/authController');
 const { register, loginUser, updateUser, forgotPassword, refreshToken, logout } = require('../controllers/authController');
 const nodemailer = require('nodemailer');
 

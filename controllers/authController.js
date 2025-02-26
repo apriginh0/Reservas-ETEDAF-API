@@ -249,12 +249,14 @@ const logout = async (req, res) => {
 };
 
  // Exportar todas as funções
- exports.loginUser = loginUser;
- exports.register = register;
- exports.updateUser = updateUser;
- exports.forgotPassword = forgotPassword;
- exports.refreshToken = refreshToken;
- exports.logout = logout;
- exports.getCurrentUser = getCurrentUser;
+ module.exports = {
+  loginUser,
+  register,
+  updateUser,
+  forgotPassword,
+  refreshToken,
+  logout,
+  getCurrentUser // ✅ Exportação correta
+};
 
 
