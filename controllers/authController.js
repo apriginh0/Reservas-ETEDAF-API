@@ -170,10 +170,21 @@ const updateUser = async (req, res) => {
 
  const getCurrentUser = async (req, res) => {
   try {
-    const user = await db.get('SELECT id, role FROM users WHERE id = ?', [req.user.id]);
-    res.json(user);
+    // Modifique a query para usar a sintaxe do Turso
+    const result = await db.execute({
+      sql: 'SELECT id, name, email, role FROM users WHERE id = ?',
+      args: [req.user.id]
+    });
+
+    // Verifique se o usuário existe
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    res.json(result.rows[0]); // Retorna os dados do usuário
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar usuário' });
+    console.error('Erro no getCurrentUser:', error);
+    res.status(500).json({ message: 'Erro interno ao buscar usuário' });
   }
 };
 
