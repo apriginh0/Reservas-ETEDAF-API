@@ -102,7 +102,7 @@ const refreshToken = async (req, res) => {
       res.cookie('access_token', newTokens.accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'Strict',
+          sameSite: 'None',
           maxAge: 15 * 60 * 1000
       });
 
@@ -171,6 +171,7 @@ const updateUser = async (req, res) => {
  const getCurrentUser = async (req, res) => {
   try {
     // Modifique a query para usar a sintaxe do Turso
+    console.log('Usuário autenticado:', req.user);
     const result = await db.execute({
       sql: 'SELECT id, name, email, role FROM users WHERE id = ?',
       args: [req.user.id]
@@ -256,7 +257,7 @@ const logout = async (req, res) => {
   forgotPassword,
   refreshToken,
   logout,
-  getCurrentUser // ✅ Exportação correta
+  getCurrentUser
 };
 
 
