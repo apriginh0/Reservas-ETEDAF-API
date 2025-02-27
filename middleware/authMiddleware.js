@@ -5,6 +5,8 @@ require('dotenv').config();
 // Middleware principal de autenticação (substitui protect e authenticateToken)
 const authenticate = async (req, res, next) => {
     // 1. Pega o token do cookie (não mais do header)
+    console.log('[AUTH] Headers:', req.headers);
+    console.log('[AUTH] Cookies:', req.cookies);
     console.log('Cookies recebidos:', req.cookies); // Verifique se o token está presente
     const token = req.cookies.access_token;
 

@@ -19,7 +19,8 @@ const allowedOrigins = [
   'http://localhost:8100',
   'https://localhost',
   'https://localhost/login',
-  null                               // Para apps Android
+  'http://localhost:8080',
+  'http://localhost:3000',
 ];
 
 // Middlewares de segurança
@@ -28,8 +29,18 @@ app.use(helmet()); // Ativa proteções padrão
 app.use(express.json());
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      console.log('[CORS] Origem recebida:', origin); // 👀 Log para depuração
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn('[CORS] Origem bloqueada:', origin);
+        callback(new Error('Não permitido por CORS'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
   })
 );
 
