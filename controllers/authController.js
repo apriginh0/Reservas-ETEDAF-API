@@ -54,7 +54,7 @@ const loginUser = async (req, res) => {
         secure: true,
         sameSite: 'None',
         maxAge: 15 * 60 * 1000, // 15 minutos
-        domain: '.onrender.com'
+        domain: '.reservas-etedaf-api.onrender.com'
     });
 
     res.status(200).json({
