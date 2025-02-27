@@ -54,7 +54,7 @@ const loginUser = async (req, res) => {
         secure: true,
         sameSite: 'None',
         maxAge: 15 * 60 * 1000, // 15 minutos
-        domain: '.reservas-etedaf-api.onrender.com'
+        domain: 'reservas-etedaf-api.onrender.com'
     });
 
     res.status(200).json({
@@ -243,7 +243,12 @@ const revokeTokens = async (userId) => {
 const logout = async (req, res) => {
   try {
       await revokeTokens(req.user.id);
-      res.clearCookie('access_token');
+      res.clearCookie('access_token', {
+        domain: 'reservas-etedaf-api.onrender.com', // Mesmo domínio do login
+        path: '/',
+        secure: true,
+        sameSite: 'None'
+      });
       res.status(200).json({ message: 'Logout realizado com sucesso' });
   } catch (error) {
       res.status(500).json({ message: 'Erro ao fazer logout' });
