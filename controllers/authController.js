@@ -173,7 +173,7 @@ const updateUser = async (req, res) => {
     // Modifique a query para usar a sintaxe do Turso
     console.log('Usuário autenticado:', req.user);
     const result = await db.execute({
-      sql: 'SELECT id, email, role FROM users WHERE id = ?',
+      sql: 'SELECT id, name, email, role FROM users WHERE id = ?',
       args: [req.user.id]
     });
 
