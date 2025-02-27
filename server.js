@@ -21,6 +21,7 @@ const allowedOrigins = [
   'https://localhost/login',
   'http://localhost:8080',
   'http://localhost:3000',
+  null                               // Para apps Android
 ];
 
 // Middlewares de segurança
