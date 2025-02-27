@@ -6,6 +6,7 @@ const salasRoutes = require('./routes/salasRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const classReservationsRoutes = require('./routes/class_reservationsRoutes');
+const cookieParser = require('cookie-parser');
 
 const formData = require('form-data');
 const helmet = require('helmet');
@@ -13,6 +14,7 @@ const Mailgun = require('mailgun.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.use(cookieParser()); // Middleware crucial para ler cookies
 const FRONTEND_URL = process.env.FRONTEND_URL; // Ajuste para seu frontend local
 const allowedOrigins = [
   FRONTEND_URL,             // Seu frontend na Vercel (ex: "https://www.etedaf.com.br")
@@ -41,7 +43,8 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['set-cookie'] // Explicita headers de cookies
   })
 );
 
