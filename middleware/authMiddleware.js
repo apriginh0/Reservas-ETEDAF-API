@@ -43,12 +43,6 @@ const authenticate = async (req, res, next) => {
         // 5. Trata erros específicos
         console.error('Erro no middleware:', error);
         if (error.name === 'TokenExpiredError') {
-            res.clearCookie('access_token', { // Limpa o cookie expirado
-            domain: 'reservas-etedaf-api.onrender.com',
-            path: '/',
-            secure: true,
-            sameSite: 'None'
-            });
             return res.status(401).json({
                 message: 'Sessão expirada. Faça login novamente.',
                 errorCode: 'TOKEN_EXPIRED' // Útil para o frontend tratar

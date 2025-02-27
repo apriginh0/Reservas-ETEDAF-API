@@ -243,14 +243,7 @@ const revokeTokens = async (userId) => {
 const logout = async (req, res) => {
   try {
       await revokeTokens(req.user.id);
-      // Limpa o cookie com as mesmas opções usadas no login
-      res.clearCookie('access_token', {
-        domain: 'reservas-etedaf-api.onrender.com', // Mesmo domínio do login
-        path: '/', // Mesmo caminho
-        secure: true, // Obrigatório para HTTPS
-        sameSite: 'None', // Mesma política do login
-        httpOnly: true // Garante que o cookie seja apenas HTTP
-      });
+      res.clearCookie('access_token');
       res.status(200).json({ message: 'Logout realizado com sucesso' });
   } catch (error) {
       res.status(500).json({ message: 'Erro ao fazer logout' });
