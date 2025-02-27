@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate, adminOnly } = require('../middleware/authMiddleware'); // Importa o middleware
-const authController = require('../controllers/authController');
+const { loginUser, register, updateUser, forgotPassword, refreshToken, logout, getCurrentUser } = require('../controllers/authController');
 const nodemailer = require('nodemailer');
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.post('/refresh-token', refreshToken); // Nova rota para refresh token
 router.post('/logout', authenticate, logout);
 
 // Rota do usuário autenticado
-router.get('/me', authController.getCurrentUser);
+router.get('/me', authenticate, getCurrentUser);
 // Rota protegida
 router.get('/profile', authenticate, (req, res) => {
    res.json({ message: 'Acesso autorizado!', user: req.user });
