@@ -13,7 +13,7 @@ router.post('/refresh-token', refreshToken); // Nova rota para refresh token
 router.post('/logout', authenticate, logout);
 
 // Rota do usuário autenticado
-router.get('/me', authenticate, getCurrentUser);
+router.get('/me', getCurrentUser);
 // Rota protegida
 router.get('/profile', authenticate, (req, res) => {
    res.json({ message: 'Acesso autorizado!', user: req.user });
