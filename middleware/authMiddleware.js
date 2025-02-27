@@ -8,7 +8,7 @@ const authenticate = async (req, res, next) => {
     console.log('[AUTH] Headers:', req.headers);
     console.log('[AUTH] Cookies:', req.cookies);
     console.log('Cookies recebidos:', req.cookies); // Verifique se o token está presente
-    const token = req.cookies.access_token;
+    const token = req.cookies?.access_token;
 
     if (!token) {
         return res.status(401).json({
