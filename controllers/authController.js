@@ -12,7 +12,7 @@ const generateTokens = async (user) => {
   const accessToken = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '7d' }
   );
 
   // Refresh Token (7 dias)
@@ -53,7 +53,7 @@ const loginUser = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'None',
-        maxAge: 15 * 60 * 1000, // 15 minutos
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
         domain: 'reservas-etedaf-api.onrender.com'
     });
 
