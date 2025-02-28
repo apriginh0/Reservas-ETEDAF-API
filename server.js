@@ -18,6 +18,7 @@ app.use(cookieParser()); // Middleware crucial para ler cookies
 const FRONTEND_URL = process.env.FRONTEND_URL; // Ajuste para seu frontend local
 const allowedOrigins = [
   FRONTEND_URL,             // Seu frontend na Vercel (ex: "https://www.etedaf.com.br")
+  'https://reservas-etedaf-escola-etedafs-projects.vercel.app',
   'http://localhost:8100',
   'https://localhost',
   'https://localhost/login',
