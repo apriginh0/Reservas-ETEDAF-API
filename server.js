@@ -44,7 +44,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-    exposedHeaders: ['set-cookie', 'clear-site-data'] // Explicita headers de cookies
+    exposedHeaders: ['set-cookie'] // Explicita headers de cookies
   })
 );
 
