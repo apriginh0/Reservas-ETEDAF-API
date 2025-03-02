@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Importa o modelo User
 const db = require('../config/dbTurso'); // Conexão com o banco de dados
 const nodemailer = require('nodemailer');
@@ -39,6 +39,9 @@ const loginUser = async (req, res) => {
       sql: query,
       args: [email]});
     const user = result.rows[0]; // Pegar a primeira linha do resultado
+
+    console.log("Senha recebida (usuário):", password);
+    console.log("Senha armazenada (banco):", user.password);
 
     // Verificar se o usuário existe
     if (!user || user.approved !== 1 || !(await bcrypt.compare(password, user.password))) {
