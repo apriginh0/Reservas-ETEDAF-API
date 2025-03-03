@@ -33,19 +33,38 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    console.log("Recebendo login para:", email);
+    console.log("Senha recebida (usuário):", password);
+    console.log("Tipo da senha recebida:", typeof password);
     // Buscar usuário no banco de dados
     const query = 'SELECT * FROM users WHERE email = ?';
     const result = await db.execute({
       sql: query,
       args: [email]});
+
+    if (!result.rows.length) {
+      console.log("Usuário não encontrado.");
+      return res.status(401).json({ message: 'Credenciais inválidas' });
+    }
+
     const user = result.rows[0]; // Pegar a primeira linha do resultado
 
-    console.log("Senha recebida (usuário):", password);
+    console.log("Usuário encontrado:", user.email);
     console.log("Senha armazenada (banco):", user.password);
+    console.log("Tipo da senha armazenada:", typeof user.password);
 
     // Verificar se o usuário existe
-    if (!user || user.approved !== 1 || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'Credenciais inválidas ou conta aguardando autorização' });
+    if (!user || user.approved !== 1 || !user.password) {
+      return res.status(401).json({ message: 'Erro interno ao verificar credenciais' });
+    }
+
+    // Comparar senha usando bcrypt
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("Resultado da comparação com bcrypt:", isMatch);
+
+    if (!isMatch) {
+      console.log("Senha incorreta.");
+      return res.status(401).json({ message: 'Credenciais inválidas' });
     }
 
     // Comparar senha usando bcrypt
@@ -59,6 +78,8 @@ const loginUser = async (req, res) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
         domain: 'reservas-etedaf-api.onrender.com'
     });
+
+    console.log("Login bem-sucedido para:", email);
 
     res.status(200).json({
         message: 'Login bem-sucedido!',
