@@ -14,6 +14,7 @@ const generateTokens = async (user) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
   );
+  console.log('Token gerado:', accessToken);
 
   // Refresh Token (7 dias)
   const refreshToken = crypto.randomBytes(64).toString('hex');
