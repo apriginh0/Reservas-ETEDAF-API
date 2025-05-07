@@ -54,3 +54,16 @@ exports.changeUserRole = async (req, res) => {
     res.status(500).json({ error: 'Erro ao alterar função do usuário' });
   }
 };
+
+exports.getApprovedTeachers = async (req, res) => {
+  try {
+    const result = await db.execute(
+      'SELECT id, name FROM users WHERE approved = 1'
+    );
+    res.status(200).json({ data: result.rows });
+  } catch (error) {
+    console.error('Erro ao buscar professores aprovados:', error);
+    res.status(500).json({ error: 'Erro ao buscar professores' });
+  }
+};
+

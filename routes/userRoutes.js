@@ -17,4 +17,8 @@ router.get('/approved', userController.getApprovedUsers);
 // Rota para alterar o papel do usuário (role)
 router.put('/change-role/:id', userController.changeUserRole);
 
+// Rota para obter todos os professores aprovados
+router.get('/approved-teachers', userController.getApprovedTeachers);
+
+
 module.exports = router;
