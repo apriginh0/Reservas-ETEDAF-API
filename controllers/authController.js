@@ -10,9 +10,9 @@ require('dotenv').config(); // Para acessar o JWT_SECRET do .env
 const generateTokens = async (user) => {
   // Access Token (15 minutos)
   const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
   );
   console.log('Token gerado:', accessToken);
 
@@ -22,8 +22,8 @@ const generateTokens = async (user) => {
 
   // Armazena hash do refresh token
   await db.execute({
-      sql: 'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
-      args: [user.id, await bcrypt.hash(refreshToken, 10), expiresAt.toISOString()]
+    sql: 'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+    args: [user.id, await bcrypt.hash(refreshToken, 10), expiresAt.toISOString()]
   });
 
   return { accessToken, refreshToken };
@@ -41,7 +41,8 @@ const loginUser = async (req, res) => {
     const query = 'SELECT * FROM users WHERE email = ?';
     const result = await db.execute({
       sql: query,
-      args: [email]});
+      args: [email]
+    });
 
     if (!result.rows.length) {
       console.log("Usuário não encontrado.");
@@ -73,19 +74,19 @@ const loginUser = async (req, res) => {
 
     // Configura cookie seguro
     res.cookie('access_token', accessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'None',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        domain: 'reservas-etedaf-api.onrender.com'
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      domain: 'reservas-etedaf-api.onrender.com'
     });
 
     console.log("Login bem-sucedido para:", email);
 
     res.status(200).json({
-        message: 'Login bem-sucedido!',
-        refreshToken, // Enviado apenas uma vez via corpo
-        user: { id: user.id, email: user.email, role: user.role }
+      message: 'Login bem-sucedido!',
+      refreshToken, // Enviado apenas uma vez via corpo
+      user: { id: user.id, email: user.email, role: user.role }
     });
   } catch (error) {
     console.error('Erro no login:', error.message);
@@ -98,103 +99,103 @@ const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
 
   try {
-      // Busca token no banco
-      const hashedToken = await bcrypt.hash(refreshToken, 10);
-      const tokenResult = await db.execute({
-          sql: `SELECT * FROM refresh_tokens
+    // Busca token no banco
+    const hashedToken = await bcrypt.hash(refreshToken, 10);
+    const tokenResult = await db.execute({
+      sql: `SELECT * FROM refresh_tokens
                 WHERE token = ? AND expires_at > datetime('now')`,
-          args: [hashedToken]
-      });
+      args: [hashedToken]
+    });
 
-      const dbToken = tokenResult.rows[0];
-      if (!dbToken) throw new Error('Refresh token inválido');
+    const dbToken = tokenResult.rows[0];
+    if (!dbToken) throw new Error('Refresh token inválido');
 
-      // Revoga token usado
-      await db.execute({
-          sql: 'DELETE FROM refresh_tokens WHERE id = ?',
-          args: [dbToken.id]
-      });
+    // Revoga token usado
+    await db.execute({
+      sql: 'DELETE FROM refresh_tokens WHERE id = ?',
+      args: [dbToken.id]
+    });
 
-      // Gera novos tokens
-      const userResult = await db.execute({
-          sql: 'SELECT * FROM users WHERE id = ?',
-          args: [dbToken.user_id]
-      });
-      const user = userResult.rows[0];
+    // Gera novos tokens
+    const userResult = await db.execute({
+      sql: 'SELECT * FROM users WHERE id = ?',
+      args: [dbToken.user_id]
+    });
+    const user = userResult.rows[0];
 
-      const newTokens = await generateTokens(user);
+    const newTokens = await generateTokens(user);
 
-      // Atualiza cookie
-      res.cookie('access_token', newTokens.accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'None',
-          maxAge: 15 * 60 * 1000
-      });
+    // Atualiza cookie
+    res.cookie('access_token', newTokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'None',
+      maxAge: 15 * 60 * 1000
+    });
 
-      res.json({ refreshToken: newTokens.refreshToken });
+    res.json({ refreshToken: newTokens.refreshToken });
 
   } catch (error) {
-      console.error('Erro ao renovar token:', error);
-      res.status(401).json({ message: 'Sessão expirada, faça login novamente' });
+    console.error('Erro ao renovar token:', error);
+    res.status(401).json({ message: 'Sessão expirada, faça login novamente' });
   }
 };
 
 
 // Registro de usuário (exemplo simples)
 const register = async (req, res) => {
-   const { name, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-   try {
-     // Verificar se o usuário já existe no banco
+  try {
+    // Verificar se o usuário já existe no banco
 
-     const userExists = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+    const userExists = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
 
-     if (userExists.rows.length > 0) {
-       return res.status(400).json({ message: 'Usuário já existe' });
-     }
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ message: 'Usuário já existe' });
+    }
 
-     // Hash da senha usando bcrypt
-     const hashedPassword = await User.hashPassword(password);
+    // Hash da senha usando bcrypt
+    const hashedPassword = await User.hashPassword(password);
 
-     // Inserir o novo usuário no banco
-     await db.execute({
-       sql: `INSERT INTO users (name, email, password, role, approved) VALUES (?, ?, ?, ?,?)`,
-       args: [name, email, hashedPassword, 'teacher', 0], // Definindo 'teacher' como role padrão
-     });
+    // Inserir o novo usuário no banco
+    await db.execute({
+      sql: `INSERT INTO users (name, email, password, role, approved) VALUES (?, ?, ?, ?,?)`,
+      args: [name, email, hashedPassword, 'teacher', 0], // Definindo 'teacher' como role padrão
+    });
 
-     res.status(201).json({ message: 'Usuário registrado com sucesso' });
-   } catch (error) {
-     console.error('Erro ao registrar usuário:', error.message);
-     res.status(500).json({ message: 'Erro ao registrar usuário', error: error.message });
-   }
- };
+    res.status(201).json({ message: 'Usuário registrado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao registrar usuário:', error.message);
+    res.status(500).json({ message: 'Erro ao registrar usuário', error: error.message });
+  }
+};
 
- // Atualizar usuário (apenas para admin)
+// Atualizar usuário (apenas para admin)
 const updateUser = async (req, res) => {
-   const { userId, approved, role } = req.body; // Dados recebidos
-   const adminId = req.user.id; // Usuário autenticado (deve ser admin)
+  const { userId, approved, role } = req.body; // Dados recebidos
+  const adminId = req.user.id; // Usuário autenticado (deve ser admin)
 
-   try {
-     // Buscar o usuário autenticado no banco
-     const adminQuery = 'SELECT role FROM users WHERE id = ?';
-     const adminResult = await db.execute({ sql: adminQuery, args: [adminId] });
+  try {
+    // Buscar o usuário autenticado no banco
+    const adminQuery = 'SELECT role FROM users WHERE id = ?';
+    const adminResult = await db.execute({ sql: adminQuery, args: [adminId] });
 
-     if (adminResult.rows[0]?.role !== 'admin') {
-       return res.status(403).json({ message: 'Acesso negado. Permissão de administrador necessária.' });
-     }
+    if (adminResult.rows[0]?.role !== 'admin') {
+      return res.status(403).json({ message: 'Acesso negado. Permissão de administrador necessária.' });
+    }
 
-     // Atualizar o usuário especificado
-     const updateQuery = 'UPDATE users SET approved = ?, role = ? WHERE id = ?';
-     await db.execute({ sql: updateQuery, args: [approved, role, userId] });
+    // Atualizar o usuário especificado
+    const updateQuery = 'UPDATE users SET approved = ?, role = ? WHERE id = ?';
+    await db.execute({ sql: updateQuery, args: [approved, role, userId] });
 
-     res.status(200).json({ message: 'Usuário atualizado com sucesso.' });
-   } catch (error) {
-     res.status(500).json({ message: 'Erro ao atualizar usuário', error: error.message });
-   }
- };
+    res.status(200).json({ message: 'Usuário atualizado com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao atualizar usuário', error: error.message });
+  }
+};
 
- const getCurrentUser = async (req, res) => {
+const getCurrentUser = async (req, res) => {
   try {
     // Modifique a query para usar a sintaxe do Turso
     console.log('Usuário autenticado:', req.user);
@@ -237,7 +238,7 @@ const forgotPassword = async (req, res) => {
       host: 'gmail',
       auth: {
         user: process.env.EMAIL_USER, // Configure no .env
-        pass: process.env.EMAIL_PASS, // Configure no .env
+        pass: process.env.SENHA_APP, // Configure no .env
       },
     });
 
@@ -257,35 +258,75 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// Redefinir senha
+const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    // Verificar e decodificar o token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Buscar usuário
+    const userResult = await db.execute({
+      sql: 'SELECT * FROM users WHERE id = ?',
+      args: [decoded.id]
+    });
+    const user = userResult.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+
+    // Hash da nova senha
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualizar senha no banco
+    await db.execute({
+      sql: 'UPDATE users SET password = ? WHERE id = ?',
+      args: [hashedPassword, user.id]
+    });
+
+    res.status(200).json({ message: 'Senha redefinida com sucesso.' });
+
+  } catch (error) {
+    console.error('Erro ao redefinir senha:', error);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({ message: 'O link de redefinição expirou.' });
+    }
+    res.status(500).json({ message: 'Erro ao redefinir senha.' });
+  }
+};
+
 const revokeTokens = async (userId) => {
   await db.execute({
-      sql: 'DELETE FROM refresh_tokens WHERE user_id = ?',
-      args: [userId]
+    sql: 'DELETE FROM refresh_tokens WHERE user_id = ?',
+    args: [userId]
   });
 };
 
 // Novo método de logout
 const logout = async (req, res) => {
   try {
-      await revokeTokens(req.user.id);
-      res.clearCookie('access_token', {
-        domain: 'reservas-etedaf-api.onrender.com', // Mesmo domínio do login
-        path: '/',
-        secure: true,
-        sameSite: 'None'
-      });
-      res.status(200).json({ message: 'Logout realizado com sucesso' });
+    await revokeTokens(req.user.id);
+    res.clearCookie('access_token', {
+      domain: 'reservas-etedaf-api.onrender.com', // Mesmo domínio do login
+      path: '/',
+      secure: true,
+      sameSite: 'None'
+    });
+    res.status(200).json({ message: 'Logout realizado com sucesso' });
   } catch (error) {
-      res.status(500).json({ message: 'Erro ao fazer logout' });
+    res.status(500).json({ message: 'Erro ao fazer logout' });
   }
 };
 
- // Exportar todas as funções
- module.exports = {
+// Exportar todas as funções
+module.exports = {
   loginUser,
   register,
   updateUser,
   forgotPassword,
+  resetPassword,
   refreshToken,
   logout,
   getCurrentUser
