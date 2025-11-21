@@ -235,10 +235,10 @@ const forgotPassword = async (req, res) => {
 
     // Configurar transporte de e-mail
     const transporter = nodemailer.createTransport({
-      host: 'gmail',
+      service: 'gmail', // Use 'service' para Gmail
       auth: {
-        user: process.env.EMAIL_USER, // Configure no .env
-        pass: process.env.SENHA_APP, // Configure no .env
+        user: process.env.EMAIL_USER, // Certifique-se de que isso está no .env
+        pass: process.env.SENHA_APP,
       },
     });
 
@@ -253,8 +253,8 @@ const forgotPassword = async (req, res) => {
 
     res.status(200).json({ message: 'E-mail de redefinição de senha enviado com sucesso.' });
   } catch (error) {
-    console.error('Erro ao enviar e-mail de redefinição:', error);
-    res.status(500).json({ message: 'Erro ao processar a solicitação.' });
+    console.error('Erro detalhado ao enviar e-mail de redefinição:', error);
+    res.status(500).json({ message: 'Erro ao processar a solicitação.', error: error.message });
   }
 };
 
