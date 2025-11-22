@@ -219,42 +219,62 @@ const getCurrentUser = async (req, res) => {
 // Enviar e-mail de redefinição de senha
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
+  console.log('--- Início forgotPassword ---');
+  console.log('Email recebido:', email);
 
   try {
     // Verificar se o e-mail existe no banco de dados
+    console.log('Buscando usuário no banco...');
     const query = 'SELECT * FROM users WHERE email = ?';
     const result = await db.execute({ sql: query, args: [email] });
     const user = result.rows[0];
 
     if (!user) {
+      console.log('Usuário não encontrado para o email:', email);
       return res.status(400).json({ message: 'Adicione um e-mail válido.' });
     }
+    console.log('Usuário encontrado:', user.id);
 
     // Gerar token de redefinição de senha
+    console.log('Gerando token JWT...');
     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    console.log('Token gerado com sucesso.');
 
     // Configurar transporte de e-mail
+    console.log('Configurando transporter do Nodemailer...');
+    console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Definido' : 'NÃO DEFINIDO');
+    console.log('SENHA_APP:', process.env.SENHA_APP ? 'Definido' : 'NÃO DEFINIDO');
+
     const transporter = nodemailer.createTransport({
-      service: 'gmail', // Use 'service' para Gmail
+      service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER, // Certifique-se de que isso está no .env
+        user: process.env.EMAIL_USER,
         pass: process.env.SENHA_APP,
       },
     });
 
     // Enviar e-mail de redefinição de senha
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    await transporter.sendMail({
+    console.log('Link de redefinição gerado:', resetLink);
+    console.log('Tentando enviar e-mail...');
+
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Redefinição de senha',
       text: `Clique no link para redefinir sua senha: ${resetLink}`,
     });
 
+    console.log('E-mail enviado com sucesso. Info:', info.response);
+
     res.status(200).json({ message: 'E-mail de redefinição de senha enviado com sucesso.' });
   } catch (error) {
-    console.error('Erro detalhado ao enviar e-mail de redefinição:', error);
+    console.error('!!! ERRO no forgotPassword !!!');
+    console.error('Mensagem de erro:', error.message);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ message: 'Erro ao processar a solicitação.', error: error.message });
+  } finally {
+    console.log('--- Fim forgotPassword ---');
   }
 };
 
