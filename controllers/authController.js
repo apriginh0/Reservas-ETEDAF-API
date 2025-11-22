@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Importa o modelo User
 const db = require('../config/dbTurso'); // Conexão com o banco de dados
 const nodemailer = require('nodemailer');
+const net = require('net'); // Importar módulo net para diagnóstico
 require('dotenv').config(); // Para acessar o JWT_SECRET do .env
 
 // Gera tokens e armazena refresh token
@@ -240,24 +241,55 @@ const forgotPassword = async (req, res) => {
     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     console.log('Token gerado com sucesso.');
 
-    // Configurar transporte de e-mail
-    console.log('Configurando transporter do Nodemailer...');
-    console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Definido' : 'NÃO DEFINIDO');
-    console.log('SENHA_APP:', process.env.SENHA_APP ? 'Definido' : 'NÃO DEFINIDO');
+    // DIAGNÓSTICO DE REDE
+    console.log('--- Iniciando Diagnóstico de Rede ---');
+    const testConnection = (port) => {
+      return new Promise((resolve) => {
+        console.log(`Testando conexão com smtp.gmail.com:${port}...`);
+        const socket = net.createConnection(port, 'smtp.gmail.com');
+        socket.setTimeout(5000); // 5 segundos de timeout para o teste
+
+        socket.on('connect', () => {
+          console.log(`✅ Conexão TCP com porta ${port} BEM-SUCEDIDA!`);
+          socket.end();
+          resolve(true);
+        });
+
+        socket.on('timeout', () => {
+          console.log(`❌ Timeout ao conectar na porta ${port}.`);
+          socket.destroy();
+          resolve(false);
+        });
+
+        socket.on('error', (err) => {
+          console.log(`❌ Erro ao conectar na porta ${port}:`, err.message);
+          resolve(false);
+        });
+      });
+    };
+
+    await testConnection(465);
+    await testConnection(587);
+    console.log('--- Fim do Diagnóstico ---');
+
+    // Configurar transporte de e-mail (Tentando porta 587 com STARTTLS e IPv4)
+    console.log('Configurando transporter (Porta 587, STARTTLS, IPv4)...');
 
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // Use SSL/TLS
+      port: 587,
+      secure: false, // false para 587 (STARTTLS)
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.SENHA_APP,
       },
       tls: {
-        rejectUnauthorized: false // Ajuda em alguns ambientes de container
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
       },
-      family: 4, // Força IPv4 (muito importante para Render/AWS)
-      connectionTimeout: 10000, // 10 segundos
+      family: 4, // Força IPv4
+      debug: true, // Habilita logs detalhados do SMTP
+      logger: true // Habilita logger do Nodemailer
     });
 
     // Enviar e-mail de redefinição de senha
