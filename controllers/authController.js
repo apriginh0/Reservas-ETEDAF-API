@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Importa o modelo User
 const db = require('../config/dbTurso'); // Conexão com o banco de dados
-const nodemailer = require('nodemailer');
-const net = require('net'); // Importar módulo net para diagnóstico
+const { Resend } = require('resend'); // Importa Resend
+const resend = new Resend(process.env.RESEND_API_KEY); // Inicializa com a chave do .env
 require('dotenv').config(); // Para acessar o JWT_SECRET do .env
 
 // Gera tokens e armazena refresh token
@@ -241,70 +241,27 @@ const forgotPassword = async (req, res) => {
     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     console.log('Token gerado com sucesso.');
 
-    // DIAGNÓSTICO DE REDE
-    console.log('--- Iniciando Diagnóstico de Rede ---');
-    const testConnection = (port) => {
-      return new Promise((resolve) => {
-        console.log(`Testando conexão com smtp.gmail.com:${port}...`);
-        const socket = net.createConnection(port, 'smtp.gmail.com');
-        socket.setTimeout(5000); // 5 segundos de timeout para o teste
-
-        socket.on('connect', () => {
-          console.log(`✅ Conexão TCP com porta ${port} BEM-SUCEDIDA!`);
-          socket.end();
-          resolve(true);
-        });
-
-        socket.on('timeout', () => {
-          console.log(`❌ Timeout ao conectar na porta ${port}.`);
-          socket.destroy();
-          resolve(false);
-        });
-
-        socket.on('error', (err) => {
-          console.log(`❌ Erro ao conectar na porta ${port}:`, err.message);
-          resolve(false);
-        });
-      });
-    };
-
-    await testConnection(465);
-    await testConnection(587);
-    console.log('--- Fim do Diagnóstico ---');
-
-    // Configurar transporte de e-mail (Tentando porta 587 com STARTTLS e IPv4)
-    console.log('Configurando transporter (Porta 587, STARTTLS, IPv4)...');
-
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // false para 587 (STARTTLS)
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.SENHA_APP,
-      },
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
-      },
-      family: 4, // Força IPv4
-      debug: true, // Habilita logs detalhados do SMTP
-      logger: true // Habilita logger do Nodemailer
-    });
-
-    // Enviar e-mail de redefinição de senha
+    // Enviar e-mail usando Resend
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     console.log('Link de redefinição gerado:', resetLink);
-    console.log('Tentando enviar e-mail...');
+    console.log('Tentando enviar e-mail via Resend...');
 
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    const { data, error } = await resend.emails.send({
+      from: 'onboarding@resend.dev', // E-mail padrão de teste do Resend
       to: email,
-      subject: 'Redefinição de senha',
-      text: `Clique no link para redefinir sua senha: ${resetLink}`,
+      subject: 'Redefinição de senha - ETEDAF',
+      html: `<p>Você solicitou a redefinição de sua senha.</p>
+             <p>Clique no link abaixo para criar uma nova senha:</p>
+             <a href="${resetLink}">${resetLink}</a>
+             <p>Este link expira em 1 hora.</p>`,
     });
 
-    console.log('E-mail enviado com sucesso. Info:', info.response);
+    if (error) {
+      console.error('Erro retornado pelo Resend:', error);
+      return res.status(500).json({ message: 'Erro ao enviar e-mail.', error });
+    }
+
+    console.log('E-mail enviado com sucesso via Resend. ID:', data.id);
 
     res.status(200).json({ message: 'E-mail de redefinição de senha enviado com sucesso.' });
   } catch (error) {
