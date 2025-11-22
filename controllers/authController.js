@@ -246,7 +246,9 @@ const forgotPassword = async (req, res) => {
     console.log('SENHA_APP:', process.env.SENHA_APP ? 'Definido' : 'NÃO DEFINIDO');
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // Use SSL/TLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.SENHA_APP,
