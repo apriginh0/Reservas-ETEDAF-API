@@ -253,6 +253,11 @@ const forgotPassword = async (req, res) => {
         user: process.env.EMAIL_USER,
         pass: process.env.SENHA_APP,
       },
+      tls: {
+        rejectUnauthorized: false // Ajuda em alguns ambientes de container
+      },
+      family: 4, // Força IPv4 (muito importante para Render/AWS)
+      connectionTimeout: 10000, // 10 segundos
     });
 
     // Enviar e-mail de redefinição de senha
