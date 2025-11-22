@@ -247,7 +247,7 @@ const forgotPassword = async (req, res) => {
     console.log('Tentando enviar e-mail via Resend...');
 
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // E-mail padrão de teste do Resend
+      from: 'suporte@reset.etedaf.com.br', // Domínio verificado!
       to: email,
       subject: 'Redefinição de senha - ETEDAF',
       html: `<p>Você solicitou a redefinição de sua senha.</p>
