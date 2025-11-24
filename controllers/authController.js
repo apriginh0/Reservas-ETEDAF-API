@@ -32,7 +32,8 @@ const generateTokens = async (user) => {
 
 // Login Controller
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  email = email ? email.trim().toLowerCase() : '';
 
   try {
     console.log("Recebendo login para:", email);
@@ -86,6 +87,7 @@ const loginUser = async (req, res) => {
 
     res.status(200).json({
       message: 'Login bem-sucedido!',
+      accessToken, // Enviando token no corpo para suporte a mobile/iOS
       refreshToken, // Enviado apenas uma vez via corpo
       user: { id: user.id, email: user.email, role: user.role }
     });
@@ -134,7 +136,10 @@ const refreshToken = async (req, res) => {
       maxAge: 15 * 60 * 1000
     });
 
-    res.json({ refreshToken: newTokens.refreshToken });
+    res.json({
+      accessToken: newTokens.accessToken, // Enviando novo token no corpo
+      refreshToken: newTokens.refreshToken
+    });
 
   } catch (error) {
     console.error('Erro ao renovar token:', error);

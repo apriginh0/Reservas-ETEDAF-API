@@ -4,11 +4,20 @@ require('dotenv').config();
 
 // Middleware principal de autenticação (substitui protect e authenticateToken)
 const authenticate = async (req, res, next) => {
-    // 1. Pega o token do cookie (não mais do header)
+    // 1. Pega o token do header (Bearer) ou do cookie (fallback)
     console.log('[AUTH] Headers:', req.headers);
     console.log('[AUTH] Cookies:', req.cookies);
-    console.log('Cookies recebidos:', req.cookies); // Verifique se o token está presente
-    const token = req.cookies?.access_token;
+
+    let token = null;
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+        console.log('Token recebido via Header');
+    } else if (req.cookies?.access_token) {
+        token = req.cookies.access_token;
+        console.log('Token recebido via Cookie');
+    }
 
     if (!token) {
         return res.status(401).json({
