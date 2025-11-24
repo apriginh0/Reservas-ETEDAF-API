@@ -8,9 +8,7 @@ const userRoutes = require('./routes/userRoutes');
 const classReservationsRoutes = require('./routes/class_reservationsRoutes');
 const cookieParser = require('cookie-parser');
 
-const formData = require('form-data');
 const helmet = require('helmet');
-const Mailgun = require('mailgun.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -112,54 +110,25 @@ app.post("/reservations", async (req, res) => {
   }
 });
 
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY
-});
 
-// const sendEmail = async (to, subject, text) => {
-//   try {
-//     console.log('API Key:', process.env.MAILGUN_API_KEY);
-//     console.log('Domain:', process.env.MAILGUN_DOMAIN);
-
-//     const response = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
-//       from: "Suporte <adm.etedaf@gmail.com>",
-//       to: [to],
-//       subject: subject,
-//       text: text,
-//       html: `<p>${text}</p>`
-//     }).then((res) => {
-//       console.log(res);
-//     }).catch((err) => {
-//       console.log(err);
-//     });
-//     console.log('E-mail enviado com sucesso:', response);
-//   } catch (error) {
-//     console.error('Erro ao enviar e-mail:', error);
-//   }
-// };
-
-// Testando o envio
-// sendEmail('apriginh0@gmail.com', 'Teste Mailgun', 'Este é um teste de envio via Mailgun.');
 
 // Configuração customizada do helmet
 app.use(
   helmet({
-      contentSecurityPolicy: {
-          directives: {
-              defaultSrc: ["'self'"],
-              scriptSrc: ["'self'", "trusted-scripts.com"],
-          },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "trusted-scripts.com"],
       },
+    },
   })
 );
 
 // HSTS (HTTP Strict Transport Security)
 app.use((req, res, next) => {
   res.setHeader(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains; preload'
+    'Strict-Transport-Security',
+    'max-age=31536000; includeSubDomains; preload'
   );
   next();
 });
