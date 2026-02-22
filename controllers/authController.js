@@ -283,6 +283,9 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
+  // Log de depuração para verificar a senha recebida
+  console.log(`[DEBUG] Tentativa de redefinição de senha. Nova senha digitada: ${newPassword}`);
+
   try {
     // Verificar e decodificar o token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
