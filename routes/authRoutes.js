@@ -1,29 +1,37 @@
 const express = require('express');
-const { authenticate, adminOnly } = require('../middleware/authMiddleware'); // Importa o middleware
-const { loginUser, register, updateUser, forgotPassword, resetPassword, refreshToken, logout, getCurrentUser } = require('../controllers/authController');
 const nodemailer = require('nodemailer');
+const { authenticate, adminOnly } = require('../middleware/authMiddleware');
+const {
+  loginUser,
+  register,
+  updateUser,
+  forgotPassword,
+  resetPassword,
+  refreshToken,
+  logout,
+  getCurrentUser,
+} = require('../controllers/authController');
 
 const router = express.Router();
 
-// Rotas públicas
 router.post('/register', register);
 router.post('/login', loginUser);
-router.post('/forgot-password', forgotPassword); // Rota para recuperar senha
-router.post('/reset-password', resetPassword); // Rota para redefinir senha
-router.post('/refresh-token', refreshToken); // Nova rota para refresh token
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.post('/refresh-token', refreshToken);
 router.post('/logout', authenticate, logout);
 
-// Rota do usuário autenticado
 router.get('/me', authenticate, getCurrentUser);
-// Rota protegida
 router.get('/profile', authenticate, (req, res) => {
   res.json({ message: 'Acesso autorizado!', user: req.user });
 });
-// Rota protegida (apenas admin)
 router.put('/update-user', authenticate, adminOnly, updateUser);
 
-// Rota para teste de envio de e-mail
-router.post('/test-email', authenticate, async (req, res) => {
+router.post('/test-email', authenticate, adminOnly, async (req, res) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    return res.status(503).json({ message: 'Serviço de e-mail indisponível.' });
+  }
+
   try {
     const transporter = nodemailer.createTransport({
       host: 'smtp.office365.com',
@@ -42,12 +50,10 @@ router.post('/test-email', authenticate, async (req, res) => {
       text: 'Este é um teste de envio de e-mail via Nodemailer com Outlook.',
     });
 
-    res.status(200).json({ message: 'E-mail enviado com sucesso!', info });
+    return res.status(200).json({ message: 'E-mail enviado com sucesso!', info });
   } catch (error) {
-    console.error('Erro ao enviar e-mail:', error);
-    res.status(500).json({ message: 'Erro ao enviar e-mail', error });
+    return res.status(500).json({ message: 'Erro ao enviar e-mail' });
   }
 });
-
 
 module.exports = router;

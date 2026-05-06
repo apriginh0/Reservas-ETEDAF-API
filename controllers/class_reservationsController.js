@@ -1,131 +1,193 @@
-const db = require('../config/dbTurso'); // Configuração do banco de dados
+const db = require('../config/dbTurso');
+const { hasTimeConflict, normalizeReservationTimes } = require('../utils/reservationUtils');
 
-// Criar uma nova reserva
+async function getAuthenticatedUserRole(userId) {
+  const userRoleResult = await db.execute({
+    sql: 'SELECT role FROM users WHERE id = ?',
+    args: [userId],
+  });
+
+  return userRoleResult.rows[0]?.role || null;
+}
+
+async function getReservationById(id) {
+  const result = await db.execute({
+    sql: `
+      SELECT id, classId, date, time, teacherId, subject, classYear, objective, createdAt
+      FROM class_reservations
+      WHERE id = ?
+    `,
+    args: [id],
+  });
+
+  return result.rows[0] || null;
+}
+
 const createReservation = async (req, res) => {
-
   const { classId, date, time, subject, classYear, objective, createdAt } = req.body;
 
   try {
     const teacherId = req.user.id;
+    const userRole = await getAuthenticatedUserRole(teacherId);
 
-    if (!teacherId) {
-      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    if (userRole !== 'teacher' && userRole !== 'admin') {
+      return res.status(403).json({ error: 'Somente professores podem criar reservas.' });
     }
 
-    // Verifica se todos os campos obrigatórios foram fornecidos
     if (!classId || !date || !time || !subject || !classYear || !objective) {
       return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
     }
 
-    // Valida que o usuário autenticado é um professor
-    const userRoleQuery = 'SELECT role FROM users WHERE id = ?';
-    const userRoleResult = await db.execute({
-      sql: userRoleQuery,
-      args: [teacherId],
-    });
-
-    if (userRoleResult.rows[0]?.role !== 'teacher' && userRoleResult.rows[0]?.role !== 'admin') {
-      return res.status(403).json({ error: 'Somente professores podem criar reservas.' });
+    const requestedTimes = normalizeReservationTimes(time);
+    if (!requestedTimes.length) {
+      return res.status(400).json({ error: 'Selecione ao menos um horário válido.' });
     }
 
-    const query = `
-      INSERT INTO class_reservations (classId, date, time, teacherId, subject, classYear, objective, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const params = [classId, date, time, teacherId, subject, classYear, objective, createdAt];
-
-    const result = await db.execute({
-      sql: query,
-      args: params,
+    const existingReservationsResult = await db.execute({
+      sql: `
+        SELECT id, time
+        FROM class_reservations
+        WHERE classId = ? AND date = ?
+      `,
+      args: [classId, date],
     });
 
-    if (!result || !result.rowsAffected) {
-      console.error('Erro ao inserir a reserva no banco:', result);
+    const conflictingReservation = existingReservationsResult.rows.find((reservation) =>
+      hasTimeConflict(reservation.time, requestedTimes)
+    );
+
+    if (conflictingReservation) {
+      return res.status(409).json({ error: 'Já existe reserva para um ou mais horários selecionados.' });
+    }
+
+    const result = await db.execute({
+      sql: `
+        INSERT INTO class_reservations (classId, date, time, teacherId, subject, classYear, objective, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [classId, date, requestedTimes.join(', '), teacherId, subject, classYear, objective, createdAt],
+    });
+
+    if (!result.rowsAffected) {
       return res.status(500).json({ error: 'Erro ao criar a reserva.' });
     }
 
-    res.status(201).json({ message: 'Reserva criada com sucesso!' });
+    return res.status(201).json({ message: 'Reserva criada com sucesso!' });
   } catch (error) {
-    console.error('Erro ao criar reserva:', error.message);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Erro ao criar reserva.' });
   }
 };
 
-// Buscar todas as reservas (opcional)
 const getAllReservations = async (req, res) => {
   try {
-    const query = 'SELECT * FROM class_reservations';
-    const result = await db.execute(query);
+    const { date, classId } = req.query;
+    const filters = [];
+    const args = [];
 
-    if (!result || !result.rows) {
-      console.error('Consulta retornou um valor inválido:', result);
-      return res.status(500).json({ error: 'Erro ao buscar reservas.' });
+    if (date) {
+      filters.push('date = ?');
+      args.push(date);
     }
 
-    res.status(200).json(result.rows); // Retorna as linhas da query
+    if (classId) {
+      filters.push('classId = ?');
+      args.push(Number(classId));
+    }
+
+    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    const result = await db.execute({
+      sql: `
+        SELECT id, classId, date, time, teacherId, subject, classYear, objective, createdAt
+        FROM class_reservations
+        ${whereClause}
+        ORDER BY date ASC, classId ASC, time ASC
+      `,
+      args,
+    });
+
+    return res.status(200).json(result.rows || []);
   } catch (error) {
-    console.error('Erro ao buscar reservas:', error.message);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Erro ao buscar reservas.' });
   }
 };
 
 const updateReservation = async (req, res) => {
   const id = Number(req.params.id);
-  const { time } = req.body; // Novo valor de time
+  const { time } = req.body;
 
-  const updateQuery = 'UPDATE class_reservations SET time = ? WHERE id = ?';
-  const updateResult = await db.execute({ sql: updateQuery, args: [time, id] });
-
-  if (updateResult.rowsAffected === 0) {
-    return res.status(500).json({ message: 'Erro ao atualizar reserva.' });
+  if (Number.isNaN(id)) {
+    return res.status(400).json({ message: 'ID inválido.' });
   }
 
-  res.status(200).json({ message: 'Reserva atualizada com sucesso!' });
+  const normalizedTimes = normalizeReservationTimes(time);
+  if (!normalizedTimes.length) {
+    return res.status(400).json({ message: 'Horário inválido.' });
+  }
+
+  try {
+    const reservation = await getReservationById(id);
+    if (!reservation) {
+      return res.status(404).json({ message: 'Reserva não encontrada.' });
+    }
+
+    const isOwner = reservation.teacherId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Você não pode editar esta reserva.' });
+    }
+
+    const updateResult = await db.execute({
+      sql: 'UPDATE class_reservations SET time = ? WHERE id = ?',
+      args: [normalizedTimes.join(', '), id],
+    });
+
+    if (!updateResult.rowsAffected) {
+      return res.status(500).json({ message: 'Erro ao atualizar reserva.' });
+    }
+
+    return res.status(200).json({ message: 'Reserva atualizada com sucesso!' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Erro ao atualizar reserva.' });
+  }
 };
 
-
 const deleteReservation = async (req, res) => {
-  const id = Number(req.params.id); // Convertendo para número
+  const id = Number(req.params.id);
 
-  if (isNaN(id)) {
+  if (Number.isNaN(id)) {
     return res.status(400).json({ message: 'ID inválido.' });
   }
 
   try {
-    // Primeiro, verificamos se a reserva existe
-    const checkQuery = 'SELECT * FROM class_reservations WHERE id = ?';
-    const checkResult = await db.execute({
-      sql: checkQuery,
-      args: [id],
-    });
-
-    if (checkResult.rows.length === 0) {
+    const reservation = await getReservationById(id);
+    if (!reservation) {
       return res.status(404).json({ message: 'Reserva não encontrada.' });
     }
 
-    // Excluir a reserva
-    const deleteQuery = 'DELETE FROM class_reservations WHERE id = ?';
+    const isOwner = reservation.teacherId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Você não pode excluir esta reserva.' });
+    }
+
     const deleteResult = await db.execute({
-      sql: deleteQuery,
+      sql: 'DELETE FROM class_reservations WHERE id = ?',
       args: [id],
     });
 
-    if (deleteResult.rowsAffected === 0) {
+    if (!deleteResult.rowsAffected) {
       return res.status(500).json({ message: 'Erro ao excluir reserva.' });
     }
 
-    res.status(200).json({ message: 'Reserva excluída com sucesso!' });
+    return res.status(200).json({ message: 'Reserva excluída com sucesso!' });
   } catch (error) {
-    console.error('Erro ao excluir reserva:', error);
-    res.status(500).json({ message: 'Erro ao excluir reserva.', error: error.message });
+    return res.status(500).json({ message: 'Erro ao excluir reserva.' });
   }
 };
 
-
 module.exports = {
   createReservation,
-  getAllReservations,
   deleteReservation,
+  getAllReservations,
   updateReservation,
 };
-

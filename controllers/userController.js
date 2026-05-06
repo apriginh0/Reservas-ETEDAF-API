@@ -1,69 +1,120 @@
-const db = require('../config/dbTurso'); // Conexão com o banco de dados
+const db = require('../config/dbTurso');
+const { toPublicTeacher, toSafeUser } = require('../utils/userSerializers');
 
-// Buscar usuários pendentes (approved = 0)
+const ALLOWED_ROLES = new Set(['admin', 'teacher']);
+
 exports.getPendingUsers = async (req, res) => {
   try {
-    const users = await db.execute('SELECT * FROM users WHERE approved = 0');
-    res.status(200).json(users.rows);
+    const result = await db.execute({
+      sql: `
+        SELECT id, name, email, role, approved
+        FROM users
+        WHERE approved = 0
+        ORDER BY name ASC
+      `,
+      args: [],
+    });
+
+    res.status(200).json(result.rows.map(toSafeUser));
   } catch (error) {
-    console.error('Erro ao buscar usuários pendentes:', error.message);
     res.status(500).json({ error: 'Erro ao buscar usuários pendentes' });
   }
 };
 
-// Aprovar usuário (mudar approved para 1)
 exports.approveUser = async (req, res) => {
   const { id } = req.params;
+
   try {
-    await db.execute('UPDATE users SET approved = 1 WHERE id = ?', [id]);
-    res.status(200).json({ message: 'Usuário aprovado com sucesso' });
+    const result = await db.execute({
+      sql: 'UPDATE users SET approved = 1 WHERE id = ?',
+      args: [id],
+    });
+
+    if (!result.rowsAffected) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.status(200).json({ message: 'Usuário aprovado com sucesso' });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao aprovar usuário' });
+    return res.status(500).json({ error: 'Erro ao aprovar usuário' });
   }
 };
 
-// Rejeitar usuário (excluir do banco de dados)
 exports.rejectUser = async (req, res) => {
   const { id } = req.params;
+
   try {
-    await db.execute('DELETE FROM users WHERE id = ?', [id]);
-    res.status(200).json({ message: 'Usuário rejeitado com sucesso' });
+    const result = await db.execute({
+      sql: 'DELETE FROM users WHERE id = ?',
+      args: [id],
+    });
+
+    if (!result.rowsAffected) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.status(200).json({ message: 'Usuário rejeitado com sucesso' });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao rejeitar usuário' });
+    return res.status(500).json({ error: 'Erro ao rejeitar usuário' });
   }
 };
 
-// Buscar usuários aprovados (approved = 1)
 exports.getApprovedUsers = async (req, res) => {
   try {
-    const users = await db.execute('SELECT * FROM users WHERE approved = 1');
-    res.status(200).json(users.rows);
+    const result = await db.execute({
+      sql: `
+        SELECT id, name, email, role, approved
+        FROM users
+        WHERE approved = 1
+        ORDER BY name ASC
+      `,
+      args: [],
+    });
+
+    return res.status(200).json(result.rows.map(toSafeUser));
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar usuários aprovados' });
+    return res.status(500).json({ error: 'Erro ao buscar usuários aprovados' });
   }
 };
 
-// Alterar role do usuário (teacher/admin)
 exports.changeUserRole = async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
+
+  if (!ALLOWED_ROLES.has(role)) {
+    return res.status(400).json({ error: 'Função inválida' });
+  }
+
   try {
-    await db.execute('UPDATE users SET role = ? WHERE id = ?', [role, id]);
-    res.status(200).json({ message: 'Função do usuário alterada com sucesso' });
+    const result = await db.execute({
+      sql: 'UPDATE users SET role = ? WHERE id = ?',
+      args: [role, id],
+    });
+
+    if (!result.rowsAffected) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.status(200).json({ message: 'Função do usuário alterada com sucesso' });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao alterar função do usuário' });
+    return res.status(500).json({ error: 'Erro ao alterar função do usuário' });
   }
 };
 
 exports.getApprovedTeachers = async (req, res) => {
   try {
-    const result = await db.execute(
-      'SELECT id, name FROM users WHERE approved = 1'
-    );
-    res.status(200).json({ data: result.rows });
+    const result = await db.execute({
+      sql: `
+        SELECT id, name
+        FROM users
+        WHERE approved = 1
+        ORDER BY name ASC
+      `,
+      args: [],
+    });
+
+    return res.status(200).json({ data: result.rows.map(toPublicTeacher) });
   } catch (error) {
-    console.error('Erro ao buscar professores aprovados:', error);
-    res.status(500).json({ error: 'Erro ao buscar professores' });
+    return res.status(500).json({ error: 'Erro ao buscar professores' });
   }
 };
-
