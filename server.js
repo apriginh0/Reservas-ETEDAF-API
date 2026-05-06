@@ -9,7 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const classReservationsRoutes = require('./routes/class_reservationsRoutes');
 const salasRoutes = require('./routes/salasRoutes');
 const userRoutes = require('./routes/userRoutes');
-const { getAllowedOrigins, isProduction, port } = require('./config/appConfig');
+const { getAllowedOrigins, getAndroidAppPolicy, isProduction, port } = require('./config/appConfig');
 
 const app = express();
 const allowedOrigins = getAllowedOrigins();
@@ -45,6 +45,26 @@ app.use('/api/users', userRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/app/bootstrap', (req, res) => {
+  const platform = String(req.query.platform || 'web').toLowerCase();
+  const version = typeof req.query.version === 'string' ? req.query.version.trim() : '';
+
+  if (platform === 'android') {
+    return res.status(200).json(getAndroidAppPolicy(version));
+  }
+
+  return res.status(200).json({
+    platform,
+    currentVersion: version || null,
+    minimumSupportedVersion: null,
+    latestVersion: null,
+    updateRequired: false,
+    updateAvailable: false,
+    storeUrl: null,
+    message: null,
+  });
 });
 
 app.use((req, res) => {

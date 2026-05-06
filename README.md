@@ -34,6 +34,10 @@ Este backend centraliza:
 - `JWT_EXPIRES_IN`
 - `JWT_RESET_SECRET`
 - `RESET_TOKEN_EXPIRES_IN`
+- `ANDROID_MINIMUM_SUPPORTED_VERSION`
+- `ANDROID_LATEST_VERSION`
+- `ANDROID_STORE_URL`
+- `ANDROID_UPDATE_MESSAGE`
 - `TURSO_DATABASE_URL`
 - `TURSO_AUTH_TOKEN`
 - `TURSO_ID`
@@ -53,6 +57,13 @@ Este backend centraliza:
 - O arquivo `.env` não deve ser versionado.
 - O deploy em produção depende das variáveis configuradas no Render.
 - Alterações em autenticação, cookies, CORS e e-mail devem ser validadas localmente antes de subir.
+
+## Política de atualização do app
+
+- `GET /api/app/bootstrap?platform=android&version=2.2` retorna a política atual do aplicativo Android.
+- `ANDROID_MINIMUM_SUPPORTED_VERSION` define a menor versão que ainda pode continuar usando a API.
+- `ANDROID_LATEST_VERSION` informa a versão mais recente disponível na loja.
+- Quando o app nativo estiver abaixo da versão mínima, ele mostra uma mensagem obrigatória de atualização antes do uso normal.
 
 ## Documentação do projeto
 

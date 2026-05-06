@@ -9,6 +9,10 @@ process.env.JWT_RESET_SECRET = process.env.JWT_RESET_SECRET || 'integration-rese
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 process.env.RESET_TOKEN_EXPIRES_IN = process.env.RESET_TOKEN_EXPIRES_IN || '1h';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+process.env.ANDROID_MINIMUM_SUPPORTED_VERSION = process.env.ANDROID_MINIMUM_SUPPORTED_VERSION || '2.2';
+process.env.ANDROID_LATEST_VERSION = process.env.ANDROID_LATEST_VERSION || '2.3';
+process.env.ANDROID_STORE_URL =
+  process.env.ANDROID_STORE_URL || 'https://play.google.com/store/apps/details?id=br.com.etedaf.reservas';
 
 const db = require('../config/dbTurso');
 const app = require('../server');
@@ -334,6 +338,33 @@ test('health endpoint returns ok', async (t) => {
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { status: 'ok' });
+});
+
+test('app bootstrap reports when an Android version must update', async (t) => {
+  const dbMock = createDbMock();
+  db.execute = dbMock.execute;
+  const server = app.listen(0);
+  t.after(() => {
+    server.close();
+    db.execute = originalExecute;
+  });
+
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(
+    `${baseUrl}/api/app/bootstrap?platform=android&version=2.1`
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    platform: 'android',
+    currentVersion: '2.1',
+    minimumSupportedVersion: '2.2',
+    latestVersion: '2.3',
+    updateRequired: true,
+    updateAvailable: true,
+    storeUrl: 'https://play.google.com/store/apps/details?id=br.com.etedaf.reservas',
+    message: 'Uma nova versão do aplicativo está disponível. Atualize para continuar usando o sistema.',
+  });
 });
 
 test('teacher is blocked from admin routes while admin can approve pending users', async (t) => {
